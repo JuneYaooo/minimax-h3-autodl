@@ -161,15 +161,9 @@ ComfyUI 使用 dynamic VRAM loading，并通过 `--reserve-vram 2` 尝试给系�
 - 安全重启与重启后验收：[`scripts/remote/restart-h3-comfyui.sh`](scripts/remote/restart-h3-comfyui.sh)
 - 下载脚本：[`scripts/remote/download-h3-comfy.sh`](scripts/remote/download-h3-comfy.sh)
 - 模型校验脚本：[`scripts/remote/verify-h3-models.sh`](scripts/remote/verify-h3-models.sh)
-- 本地测试：[`tests/test_h3_scripts.py`](tests/test_h3_scripts.py)
 
-本地回归测试：
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-GitHub Actions 会同时运行单元测试、Python 语法检查和所有 shell 脚本的 `bash -n` 检查。
+本地测试代码、测试结果、覆盖率数据和生成的验收内容有意排除在公开仓库之外。
+GitHub Actions 只对公开部署脚本执行 Python 语法检查和 shell 脚本的 `bash -n` 检查。
 
 模型文件必须放在 `/root/autodl-tmp` 数据盘；AutoDL 环境镜像不会包含数据盘中的权重、
 输入和输出。测试媒体、抖音参考素材、权重、私有日志和本地 artifacts 均不进入版本库。

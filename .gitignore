@@ -46,10 +46,6 @@
 !/scripts/remote/validate-h3-deployment.sh
 !/scripts/remote/verify-h3-models.sh
 
-!/tests/
-/tests/*
-!/tests/test_h3_scripts.py
-
 # Defense in depth for secrets, generated media, caches, and local tooling.
 .env
 .env.*
@@ -74,6 +70,17 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# Local tests, results, coverage, and generated validation content.
+tests/
+test-results/
+coverage/
+htmlcov/
+.pytest_cache/
+.coverage
+.coverage.*
+artifacts/
+output/
 
 models/
 weights/
