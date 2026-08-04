@@ -3,7 +3,17 @@ set -Eeuo pipefail
 
 DATA_ROOT="${DATA_ROOT:-/root/autodl-tmp/h3}"
 COMFYUI_ROOT="${COMFYUI_ROOT:-/root/ComfyUI}"
+MODEL_ROOT="${MODEL_ROOT:-${DATA_ROOT}/comfyui-models}"
 OUT_DIR="${OUT_DIR:-${DATA_ROOT}/deploy/environment-snapshot}"
+PYTHON_BIN="${PYTHON_BIN:-/root/miniconda3/bin/python}"
+
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+  PYTHON_BIN="$(command -v python || true)"
+fi
+if [[ -z "${PYTHON_BIN}" || ! -x "${PYTHON_BIN}" ]]; then
+  printf 'Python interpreter not found\n' >&2
+  exit 1
+fi
 
 mkdir -p "${OUT_DIR}"
 
@@ -12,18 +22,17 @@ date -Is > "${OUT_DIR}/captured-at.txt"
 {
   uname -a
   echo
-  command -v python || true
-  python --version 2>&1 || true
+  printf '%s\n' "${PYTHON_BIN}"
+  "${PYTHON_BIN}" --version 2>&1 || true
   echo
-  command -v pip || true
-  pip --version 2>&1 || true
+  "${PYTHON_BIN}" -m pip --version 2>&1 || true
 } > "${OUT_DIR}/system.txt"
 
 if command -v nvidia-smi >/dev/null 2>&1; then
   nvidia-smi > "${OUT_DIR}/nvidia-smi.txt"
 fi
 
-python - <<'PY' > "${OUT_DIR}/torch-info.txt" 2>&1 || true
+"${PYTHON_BIN}" - <<'PY' > "${OUT_DIR}/torch-info.txt" 2>&1 || true
 try:
     import torch
     print("torch:", torch.__version__)
@@ -36,7 +45,7 @@ except Exception as exc:
     print("Unable to inspect torch:", repr(exc))
 PY
 
-pip freeze > "${OUT_DIR}/requirements-lock.txt" 2>&1 || true
+"${PYTHON_BIN}" -m pip freeze > "${OUT_DIR}/requirements-lock.txt" 2>&1 || true
 
 if command -v conda >/dev/null 2>&1; then
   conda env export > "${OUT_DIR}/conda-environment.yml" 2>&1 || true
@@ -63,13 +72,12 @@ if [[ -d "${COMFYUI_ROOT}/custom_nodes" ]]; then
   done < <(find "${COMFYUI_ROOT}/custom_nodes" -mindepth 2 -maxdepth 2 -type d -name .git | sort)
 fi
 
-if [[ -d "${DATA_ROOT}/models" ]]; then
-  du -sh "${DATA_ROOT}/models" > "${OUT_DIR}/model-total-size.txt" 2>&1 || true
-  find "${DATA_ROOT}/models" -type f -printf '%s\t%p\n' \
+if [[ -d "${MODEL_ROOT}" ]]; then
+  du -sh "${MODEL_ROOT}" > "${OUT_DIR}/model-total-size.txt" 2>&1 || true
+  find "${MODEL_ROOT}" -type f -printf '%s\t%p\n' \
     | sort -nr \
     | head -100 \
     > "${OUT_DIR}/largest-model-files.txt" || true
 fi
 
 echo "Environment snapshot written to: ${OUT_DIR}"
-

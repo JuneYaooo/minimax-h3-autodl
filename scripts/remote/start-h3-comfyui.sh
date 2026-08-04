@@ -3,7 +3,9 @@ set -Eeuo pipefail
 
 DATA_ROOT="${DATA_ROOT:-/root/autodl-tmp/h3}"
 COMFYUI_ROOT="${COMFYUI_ROOT:-/root/ComfyUI}"
-LISTEN_HOST="${LISTEN_HOST:-0.0.0.0}"
+# Bind locally by default. Use an SSH tunnel for browser access; explicitly
+# override LISTEN_HOST only when the surrounding network policy is understood.
+LISTEN_HOST="${LISTEN_HOST:-127.0.0.1}"
 LISTEN_PORT="${LISTEN_PORT:-8188}"
 RESERVE_VRAM_GB="${RESERVE_VRAM_GB:-2}"
 PYTHON_BIN="${PYTHON_BIN:-/root/miniconda3/bin/python}"

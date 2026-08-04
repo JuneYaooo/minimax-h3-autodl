@@ -35,6 +35,7 @@ printf 'download_start=%s epoch=%s revision=%s\n' \
 # values after one --include option can cause the first pattern to be ignored.
 hf download "${MODEL_REPO}" \
   diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors \
+  diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors \
   text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors \
   vae/minimax_h3_video_vae_fp16.safetensors \
   vae/minimax_h3_audio_vae_fp32.safetensors \

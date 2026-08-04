@@ -1,6 +1,6 @@
 ---
 name: minimax-h3-autodl
-description: "Deploy, validate, start, recover, and maintain MiniMax H3-Base FL2VA on this project's AutoDL instance. Use when Codex needs to perform or audit a first-time H3 deployment, download and verify the exact model files, install the validated ComfyUI and PyTorch/CUDA stack, start or recover the service, run deployment health checks or a minimal smoke test, capture the environment, or diagnose deployment failures. Chinese triggers include 部署 H3、安装 H3、下载模型、校验模型、启动 ComfyUI、恢复实例、部署验收 and 冒烟测试."
+description: "Deploy, validate, start, recover, and maintain MiniMax H3-Base FL2VA and Ref2VA on this project's AutoDL instance. Use when Codex needs to perform or audit a first-time H3 deployment, download and verify the exact model files, install the validated ComfyUI and PyTorch/CUDA stack, start or recover the service, run deployment health checks or FL2VA/Ref2VA smoke tests, capture the environment, or diagnose deployment failures. Chinese triggers include 部署 H3、安装 H3、下载模型、校验模型、启动 ComfyUI、恢复实例、部署验收 and 冒烟测试."
 ---
 
 # Deploy MiniMax H3 on AutoDL
@@ -31,25 +31,26 @@ For validation or recovery, preserve the current installation and diagnose befor
 2. Create the H3 data and cache layout documented in the runtime reference.
 3. Upload the canonical files from `scripts/remote/` to `/root/autodl-tmp/h3/deploy/`.
 4. Run `install-h3-comfyui.sh` to install the pinned ComfyUI and consistent PyTorch/CUDA packages.
-5. Run `download-h3-comfy.sh` to download the four exact FL2VA model files to the data disk.
+5. Run `download-h3-comfy.sh` to download the five exact FL2VA/Ref2VA model files to the data disk.
 6. Run `verify-h3-models.sh`. Require exact paths, byte sizes, safetensors headers, and SHA-256 values.
 7. Start ComfyUI in the persistent `h3-comfyui` screen with `start-h3-comfyui.sh`.
-8. Run `validate-h3-deployment.sh`, then execute the minimal smoke test only after health and model checks pass.
+8. Run `validate-h3-deployment.sh`, then execute the FL2VA and representative Ref2VA smoke tests only after health and model checks pass.
 9. Run `scripts/capture-environment.sh` after acceptance and keep the resulting snapshot local.
 
-Do not describe the deployment as complete until health, required nodes, CUDA backend, all four model files, restart recovery, and a minimal audio/video smoke path have passed.
+Do not describe the deployment as complete until health, required nodes, CUDA backend, all five model files, restart recovery, FL2VA audio/video, and representative Ref2VA image/video/audio paths have passed. Keep hosted H3-Context-IR and H3-Regenerate-2K outside the local acceptance claim.
 
 ## Validate or recover an existing deployment
 
 1. Inspect `/system_stats`, the queue, `screen -ls`, matching processes, recent service logs, disk space, and the exact model paths.
 2. If a healthy unique ComfyUI process exists, do not start another one.
 3. If unhealthy, inspect the process and logs before restarting. Restart only when no task is active.
-4. After an instance restore or model read error, rerun `verify-h3-models.sh` before the smoke test.
-5. Require exactly one ComfyUI process, the `h3-comfyui` screen, a healthy endpoint, an empty queue, and successful validation after restart.
+4. For a planned restart of a healthy, empty service, use `restart-h3-comfyui.sh`; it preserves the single-process/screen boundary and runs validation after recovery.
+5. After an instance restore or model read error, rerun `verify-h3-models.sh` before the smoke test.
+6. Require exactly one ComfyUI process, the `h3-comfyui` screen, a healthy endpoint, an empty queue, and successful validation after restart.
 
 ## Keep deployment smoke artifacts local
 
-Use a short, low-cost smoke request only to prove model loading, sampling, video VAE, audio VAE, and MP4 saving. Do not treat smoke media as a retained creative output, upload it to GitHub, or call it a production-quality result.
+Use short, low-cost smoke requests only to prove model loading, conditioning, sampling, video VAE, audio VAE, and MP4 saving. For FL2VA, distinguish T2VA, first-frame, last-frame, and first-and-last-frame evidence. For Ref2VA, record the actual checkpoint and reference modalities; a successful `MiniMaxH3ReferenceToVideo` graph using the FL2VA checkpoint is not Ref2VA acceptance. Do not treat smoke media as a retained creative output, upload it to GitHub, or call it a production-quality result.
 
 ## Hand off
 

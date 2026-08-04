@@ -4,6 +4,12 @@
 !/.gitignore
 !/README.md
 
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/ci.yml
+
 !/.agents/
 /.agents/*
 !/.agents/skills/
@@ -29,12 +35,20 @@
 !/scripts/remote/
 /scripts/remote/*
 !/scripts/remote/download-h3-comfy.sh
+!/scripts/remote/check-h3-media.py
+!/scripts/remote/check-h3-service.py
 !/scripts/remote/extra_model_paths.yaml
 !/scripts/remote/install-h3-comfyui.sh
+!/scripts/remote/restart-h3-comfyui.sh
+!/scripts/remote/run-h3-ref2va-smoke.py
 !/scripts/remote/run-h3-smoke.py
 !/scripts/remote/start-h3-comfyui.sh
 !/scripts/remote/validate-h3-deployment.sh
 !/scripts/remote/verify-h3-models.sh
+
+!/tests/
+/tests/*
+!/tests/test_h3_scripts.py
 
 # Defense in depth for secrets, generated media, caches, and local tooling.
 .env

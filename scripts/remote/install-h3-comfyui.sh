@@ -4,11 +4,20 @@ set -Eeuo pipefail
 DATA_ROOT="${DATA_ROOT:-/root/autodl-tmp/h3}"
 COMFYUI_ROOT="${COMFYUI_ROOT:-/root/ComfyUI}"
 COMFYUI_TAG="v0.30.0"
+PYTHON_BIN="${PYTHON_BIN:-/root/miniconda3/bin/python}"
+TORCH_VERSION="${TORCH_VERSION:-2.13.0+cu130}"
+TORCHVISION_VERSION="${TORCHVISION_VERSION:-0.28.0+cu130}"
+TORCHAUDIO_VERSION="${TORCHAUDIO_VERSION:-2.11.0+cu130}"
 
 export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${DATA_ROOT}/cache/pip}"
 export TMPDIR="${TMPDIR:-${DATA_ROOT}/tmp}"
 
 mkdir -p "${DATA_ROOT}"/{cache/pip,tmp,logs,deploy,inputs,outputs,workflows}
+
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+  printf 'Python interpreter not executable: %s\n' "${PYTHON_BIN}" >&2
+  exit 1
+fi
 
 start_epoch="$(date +%s)"
 printf 'install_start=%s epoch=%s tag=%s\n' \
@@ -16,7 +25,10 @@ printf 'install_start=%s epoch=%s tag=%s\n' \
   | tee "${DATA_ROOT}/logs/comfy-install-status.txt"
 
 if [[ ! -d "${COMFYUI_ROOT}/.git" ]]; then
-  source /etc/network_turbo
+  if [[ -f /etc/network_turbo ]]; then
+    # shellcheck disable=SC1091
+    source /etc/network_turbo
+  fi
   git clone --branch "${COMFYUI_TAG}" --depth 1 \
     https://github.com/Comfy-Org/ComfyUI.git "${COMFYUI_ROOT}"
   unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
@@ -33,10 +45,33 @@ fi
 # Install the three PyTorch packages from one index so their CUDA runtimes stay
 # coherent; installing requirements on top of an older base image otherwise
 # selected a cu13 torchaudio next to cu128 torch/torchvision.
-python -m pip install --upgrade \
-  torch torchvision torchaudio \
+"${PYTHON_BIN}" -m pip install --upgrade \
+  "torch==${TORCH_VERSION}" \
+  "torchvision==${TORCHVISION_VERSION}" \
+  "torchaudio==${TORCHAUDIO_VERSION}" \
   --index-url https://download.pytorch.org/whl/cu130
-python -m pip install -r "${COMFYUI_ROOT}/requirements.txt"
+"${PYTHON_BIN}" -m pip install -r "${COMFYUI_ROOT}/requirements.txt"
+
+"${PYTHON_BIN}" - \
+  "${TORCH_VERSION}" "${TORCHVISION_VERSION}" "${TORCHAUDIO_VERSION}" <<'PY'
+import sys
+
+import torch
+import torchaudio
+import torchvision
+
+expected = dict(zip(("torch", "torchvision", "torchaudio"), sys.argv[1:], strict=True))
+actual = {
+    "torch": torch.__version__,
+    "torchvision": torchvision.__version__,
+    "torchaudio": torchaudio.__version__,
+}
+if actual != expected:
+    raise SystemExit(f"PyTorch package mismatch: expected={expected}, actual={actual}")
+if torch.version.cuda != "13.0":
+    raise SystemExit(f"CUDA runtime mismatch: expected=13.0, actual={torch.version.cuda}")
+print(f"validated PyTorch stack: {actual}; cuda={torch.version.cuda}")
+PY
 install -m 0644 "${DATA_ROOT}/deploy/extra_model_paths.yaml" \
   "${COMFYUI_ROOT}/extra_model_paths.yaml"
 

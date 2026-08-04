@@ -17,7 +17,7 @@ GPU: 1 × NVIDIA GeForce RTX 5090
 ComfyUI: v0.30.0
 PyTorch: 2.13.0+cu130
 CUDA runtime: 13.0
-model variant: MiniMax H3-Base FL2VA quantized consumer-GPU bundle
+model variants: MiniMax H3-Base FL2VA + Ref2VA quantized consumer-GPU bundle
 ```
 
 Use the data disk for models and caches; the system disk is too small for the model bundle.
@@ -49,9 +49,13 @@ mkdir -p /root/autodl-tmp/h3/cache/{huggingface,pip,torch}
 scripts/remote/install-h3-comfyui.sh
 scripts/remote/download-h3-comfy.sh
 scripts/remote/verify-h3-models.sh
+scripts/remote/check-h3-media.py
+scripts/remote/check-h3-service.py
 scripts/remote/start-h3-comfyui.sh
+scripts/remote/restart-h3-comfyui.sh
 scripts/remote/validate-h3-deployment.sh
 scripts/remote/run-h3-smoke.py
+scripts/remote/run-h3-ref2va-smoke.py
 scripts/remote/extra_model_paths.yaml
 scripts/capture-environment.sh
 ```
@@ -64,6 +68,7 @@ Require these exact files:
 
 ```text
 diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors
+diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors
 text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
 vae/minimax_h3_video_vae_fp16.safetensors
 vae/minimax_h3_audio_vae_fp32.safetensors
@@ -108,7 +113,10 @@ After launch, require:
 - the `comfy-kitchen` CUDA backend available and enabled;
 - model search paths pointing to the data disk.
 
-Run `validate-h3-deployment.sh` after these checks. Run the minimal smoke test only after validation succeeds.
+`validate-h3-deployment.sh` enforces these preflight checks before it submits its default FL2VA smoke.
+Set `RUN_REF2VA_SMOKE=1` together with task-local prompt and reference JSON paths for representative
+Ref2VA acceptance. Use `restart-h3-comfyui.sh` only for a healthy, empty service; it verifies the old
+single-process/screen boundary, starts a new process, and runs validation after recovery.
 
 ## Recovery and backup boundary
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Submit and monitor a small MiniMax H3 T2VA smoke test to local ComfyUI."""
+"""Submit and monitor a small MiniMax H3 FL2VA smoke test to local ComfyUI."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import json
 import time
 import urllib.error
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 def request_json(url: str, *, method: str = "GET", payload: dict | None = None) -> dict:
@@ -27,8 +27,32 @@ def request_json(url: str, *, method: str = "GET", payload: dict | None = None) 
         raise RuntimeError(f"HTTP {exc.code} from {url}: {detail}") from exc
 
 
+def normalize_input_image(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    item = PurePosixPath(raw.strip())
+    if not raw.strip() or item.is_absolute() or ".." in item.parts:
+        raise ValueError(f"input image must be a non-empty input-relative path: {raw!r}")
+    if item.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+        raise ValueError(f"unsupported input image extension: {raw!r}")
+    return item.as_posix()
+
+
+def validate_generation_args(args: argparse.Namespace) -> None:
+    if args.width <= 0 or args.height <= 0 or args.width % 32 or args.height % 32:
+        raise ValueError("width and height must be positive multiples of 32")
+    if args.length < 5 or (args.length - 5) % 17:
+        raise ValueError("length must satisfy 17n+5")
+    if not 1 <= args.steps <= 100:
+        raise ValueError("steps must be between 1 and 100")
+    if args.poll_seconds <= 0:
+        raise ValueError("poll-seconds must be positive")
+    if args.timeout_seconds <= 0:
+        raise ValueError("timeout-seconds must be positive")
+
+
 def build_prompt(args: argparse.Namespace) -> dict:
-    return {
+    graph = {
         "1": {
             "class_type": "UNETLoader",
             "inputs": {
@@ -126,6 +150,20 @@ def build_prompt(args: argparse.Namespace) -> dict:
         },
     }
 
+    if args.first_frame:
+        graph["20"] = {
+            "class_type": "LoadImage",
+            "inputs": {"image": args.first_frame},
+        }
+        graph["5"]["inputs"]["first_frame"] = ["20", 0]
+    if args.last_frame:
+        graph["21"] = {
+            "class_type": "LoadImage",
+            "inputs": {"image": args.last_frame},
+        }
+        graph["5"]["inputs"]["last_frame"] = ["21", 0]
+    return graph
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -135,6 +173,14 @@ def main() -> int:
     parser.add_argument("--length", type=int, default=56, help="17k+5 aligned frames")
     parser.add_argument("--steps", type=int, default=5)
     parser.add_argument("--seed", type=int, default=20260803)
+    parser.add_argument(
+        "--first-frame",
+        help="Optional image path relative to ComfyUI's configured input directory",
+    )
+    parser.add_argument(
+        "--last-frame",
+        help="Optional image path relative to ComfyUI's configured input directory",
+    )
     parser.add_argument("--poll-seconds", type=float, default=5.0)
     parser.add_argument("--timeout-seconds", type=int, default=7200)
     parser.add_argument(
@@ -164,6 +210,10 @@ def main() -> int:
         help="Optional UTF-8 JSON file receiving prompt id, timing, and ComfyUI outputs",
     )
     args = parser.parse_args()
+
+    validate_generation_args(args)
+    args.first_frame = normalize_input_image(args.first_frame)
+    args.last_frame = normalize_input_image(args.last_frame)
 
     if args.prompt_file:
         prompt_config = json.loads(Path(args.prompt_file).read_text(encoding="utf-8"))
@@ -213,6 +263,15 @@ def main() -> int:
                         json.dumps(
                             {
                                 "prompt_id": prompt_id,
+                                "mode": (
+                                    "first_and_last_frame"
+                                    if args.first_frame and args.last_frame
+                                    else "first_frame"
+                                    if args.first_frame
+                                    else "last_frame"
+                                    if args.last_frame
+                                    else "text_to_video"
+                                ),
                                 "generation_start_epoch": started_at,
                                 "generation_end_epoch": ended_at,
                                 "generation_duration_seconds": ended_at - started_at,
