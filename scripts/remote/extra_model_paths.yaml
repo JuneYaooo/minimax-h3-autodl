@@ -1,0 +1,6 @@
+h3_models:
+  base_path: /root/autodl-tmp/h3/comfyui-models
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+

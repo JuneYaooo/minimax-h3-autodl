@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# Copy this file to the persistent deploy directory, review every path, then:
+#   chmod +x start-h3-comfyui.sh
+#   ./start-h3-comfyui.sh
+
+DATA_ROOT="${DATA_ROOT:-/root/autodl-tmp/h3}"
+COMFYUI_ROOT="${COMFYUI_ROOT:-/root/ComfyUI}"
+CONDA_SH="${CONDA_SH:-/root/miniconda3/etc/profile.d/conda.sh}"
+CONDA_ENV="${CONDA_ENV:-comfyui}"
+LISTEN_HOST="${LISTEN_HOST:-0.0.0.0}"
+LISTEN_PORT="${LISTEN_PORT:-8188}"
+
+export HF_HOME="${HF_HOME:-${DATA_ROOT}/cache/huggingface}"
+export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-${HF_HOME}/hub}"
+export MODELSCOPE_CACHE="${MODELSCOPE_CACHE:-${DATA_ROOT}/cache/modelscope}"
+export TORCH_HOME="${TORCH_HOME:-${DATA_ROOT}/cache/torch}"
+
+mkdir -p \
+  "${HF_HOME}" \
+  "${HUGGINGFACE_HUB_CACHE}" \
+  "${MODELSCOPE_CACHE}" \
+  "${TORCH_HOME}" \
+  "${DATA_ROOT}/inputs" \
+  "${DATA_ROOT}/outputs" \
+  "${DATA_ROOT}/logs"
+
+if [[ ! -d "${COMFYUI_ROOT}" ]]; then
+  echo "ComfyUI directory not found: ${COMFYUI_ROOT}" >&2
+  exit 1
+fi
+
+if [[ -f "${CONDA_SH}" ]]; then
+  # shellcheck disable=SC1090
+  source "${CONDA_SH}"
+  conda activate "${CONDA_ENV}"
+fi
+
+cd "${COMFYUI_ROOT}"
+
+exec python main.py \
+  --listen "${LISTEN_HOST}" \
+  --port "${LISTEN_PORT}" \
+  "$@"
+
