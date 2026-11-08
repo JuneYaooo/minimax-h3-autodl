@@ -9,6 +9,12 @@ LISTEN_HOST="${LISTEN_HOST:-127.0.0.1}"
 LISTEN_PORT="${LISTEN_PORT:-8188}"
 RESERVE_VRAM_GB="${RESERVE_VRAM_GB:-2}"
 PYTHON_BIN="${PYTHON_BIN:-/root/miniconda3/bin/python}"
+MEMORY_WATCH_ENABLED="${MEMORY_WATCH_ENABLED:-1}"
+MEMORY_WATCH_SCRIPT="${MEMORY_WATCH_SCRIPT:-${DATA_ROOT}/deploy/watch-h3-memory.sh}"
+MEMORY_WATCH_LOG="${MEMORY_WATCH_LOG:-${DATA_ROOT}/logs/h3-memory-watch.log}"
+MEMORY_WATCH_SCREEN="${MEMORY_WATCH_SCREEN:-h3-memory-watch}"
+RESTART_AFTER_EACH_TASK="${RESTART_AFTER_EACH_TASK:-1}"
+export RESTART_AFTER_EACH_TASK
 
 export HF_HOME="${HF_HOME:-${DATA_ROOT}/cache/huggingface}"
 export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-${HF_HOME}/hub}"
@@ -39,6 +45,25 @@ done
 if [[ ! -x "${PYTHON_BIN}" ]]; then
   printf 'Python interpreter not executable: %s\n' "${PYTHON_BIN}" >&2
   exit 1
+fi
+
+if [[ "${MEMORY_WATCH_ENABLED}" != "0" && "${MEMORY_WATCH_ENABLED}" != "1" ]]; then
+  printf 'MEMORY_WATCH_ENABLED must be 0 or 1\n' >&2
+  exit 1
+fi
+if [[ "${MEMORY_WATCH_ENABLED}" == "1" && ! -x "${MEMORY_WATCH_SCRIPT}" ]]; then
+  printf 'Memory watcher not executable: %s\n' "${MEMORY_WATCH_SCRIPT}" >&2
+  exit 1
+fi
+if [[ "${MEMORY_WATCH_ENABLED}" == "1" ]]; then
+  if ! command -v screen >/dev/null 2>&1; then
+    printf 'Required command not found: screen\n' >&2
+    exit 1
+  fi
+  if ! screen -list 2>/dev/null | grep -qE "[0-9]+\.${MEMORY_WATCH_SCREEN}[[:space:]]"; then
+    screen -dmS "${MEMORY_WATCH_SCREEN}" bash -lc \
+      'exec "$1" >>"$2" 2>&1' _ "${MEMORY_WATCH_SCRIPT}" "${MEMORY_WATCH_LOG}"
+  fi
 fi
 
 cd "${COMFYUI_ROOT}"

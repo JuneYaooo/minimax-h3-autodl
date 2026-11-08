@@ -6,6 +6,8 @@ MODEL_ROOT="${MODEL_ROOT:-${DATA_ROOT}/comfyui-models}"
 MODEL_PATHS_CONFIG="${MODEL_PATHS_CONFIG:-${DATA_ROOT}/deploy/extra_model_paths.yaml}"
 DOWNLOAD_SCREEN="${DOWNLOAD_SCREEN:-h3-curl-download-turbo}"
 SERVICE_SCREEN="${SERVICE_SCREEN:-h3-comfyui}"
+MEMORY_WATCH_ENABLED="${MEMORY_WATCH_ENABLED:-1}"
+MEMORY_WATCH_SCREEN="${MEMORY_WATCH_SCREEN:-h3-memory-watch}"
 VERIFY_SCRIPT="${VERIFY_SCRIPT:-${DATA_ROOT}/deploy/verify-h3-models.sh}"
 CHECK_SERVICE_SCRIPT="${CHECK_SERVICE_SCRIPT:-${DATA_ROOT}/deploy/check-h3-service.py}"
 CHECK_MEDIA_SCRIPT="${CHECK_MEDIA_SCRIPT:-${DATA_ROOT}/deploy/check-h3-media.py}"
@@ -66,6 +68,7 @@ require_boolean_flag() {
 
 require_boolean_flag RUN_FL2VA_SMOKE "${RUN_FL2VA_SMOKE}"
 require_boolean_flag RUN_REF2VA_SMOKE "${RUN_REF2VA_SMOKE}"
+require_boolean_flag MEMORY_WATCH_ENABLED "${MEMORY_WATCH_ENABLED}"
 
 for required in \
   "${PYTHON_BIN}" "${VERIFY_SCRIPT}" "${CHECK_SERVICE_SCRIPT}" "${CHECK_MEDIA_SCRIPT}" \
@@ -120,6 +123,13 @@ if ! screen -list 2>/dev/null | grep -qE "[0-9]+\.${SERVICE_SCREEN}[[:space:]]";
   fail_validation screen "screen_session_missing:${SERVICE_SCREEN}"
 fi
 record_status "comfyui_screen_ok=$(date -Is) screen=${SERVICE_SCREEN}"
+if [[ "${MEMORY_WATCH_ENABLED}" == "1" ]] \
+  && ! screen -list 2>/dev/null | grep -qE "[0-9]+\.${MEMORY_WATCH_SCREEN}[[:space:]]"; then
+  fail_validation screen "memory_watch_screen_missing:${MEMORY_WATCH_SCREEN}"
+fi
+if [[ "${MEMORY_WATCH_ENABLED}" == "1" ]]; then
+  record_status "memory_watch_screen_ok=$(date -Is) screen=${MEMORY_WATCH_SCREEN}"
+fi
 
 checksum_start_epoch="$(date +%s)"
 record_status "checksum_start=$(date -Is) epoch=${checksum_start_epoch}"

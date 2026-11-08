@@ -1,4 +1,4 @@
 interface:
   display_name: "MiniMax H3 AutoDL Deployment"
-  short_description: "部署、验证和恢复 AutoDL 上的 MiniMax H3 服务"
-  default_prompt: "使用 $minimax-h3-autodl 在 AutoDL 上部署或验证 MiniMax H3，并报告模型校验与服务健康结果。"
+  short_description: "部署、诊断和优化 AutoDL 上的 MiniMax H3"
+  default_prompt: "使用 $minimax-h3-autodl 在 AutoDL 上部署、验证或诊断 MiniMax H3，包括内存高水位和长批次恢复。"

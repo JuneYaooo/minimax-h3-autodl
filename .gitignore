@@ -23,6 +23,7 @@
 !/.agents/skills/minimax-h3-autodl/references/
 /.agents/skills/minimax-h3-autodl/references/*
 !/.agents/skills/minimax-h3-autodl/references/runtime.md
+!/.agents/skills/minimax-h3-autodl/references/memory-operations.md
 
 !/docs/
 /docs/*
@@ -37,6 +38,8 @@
 !/scripts/remote/download-h3-comfy.sh
 !/scripts/remote/check-h3-media.py
 !/scripts/remote/check-h3-service.py
+!/scripts/remote/check-h3-memory.sh
+!/scripts/remote/watch-h3-memory.sh
 !/scripts/remote/extra_model_paths.yaml
 !/scripts/remote/install-h3-comfyui.sh
 !/scripts/remote/restart-h3-comfyui.sh

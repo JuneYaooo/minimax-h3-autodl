@@ -33,6 +33,7 @@ logs: /root/autodl-tmp/h3/logs
 cache: /root/autodl-tmp/h3/cache
 temporary files: /root/autodl-tmp/h3/tmp
 screen session: h3-comfyui
+memory watcher screen: h3-memory-watch
 health endpoint: http://127.0.0.1:8188/system_stats
 ```
 
@@ -51,6 +52,8 @@ scripts/remote/download-h3-comfy.sh
 scripts/remote/verify-h3-models.sh
 scripts/remote/check-h3-media.py
 scripts/remote/check-h3-service.py
+scripts/remote/check-h3-memory.sh
+scripts/remote/watch-h3-memory.sh
 scripts/remote/start-h3-comfyui.sh
 scripts/remote/restart-h3-comfyui.sh
 scripts/remote/validate-h3-deployment.sh
@@ -89,9 +92,15 @@ pgrep -af 'ComfyUI/main.py|python main.py' || true
 screen -ls || true
 curl -fsS http://127.0.0.1:8188/system_stats || true
 curl -fsS http://127.0.0.1:8188/queue || true
+/root/autodl-tmp/h3/deploy/check-h3-memory.sh || true
 ```
 
 Require enough data-disk space for the model bundle and temporary downloads. Inspect an unhealthy existing process before restarting; never launch a second ComfyUI process over it.
+
+For high RSS, `memory.high` events, or long Ref2VA batches, read
+`references/memory-operations.md` and use the read-only memory snapshot before changing service
+flags. Do not infer a leak from one high-RSS sample, and never restart over a running or pending
+queue item.
 
 ## Start and validate the service
 
@@ -106,6 +115,7 @@ After launch, require:
 
 - exactly one matching ComfyUI process;
 - a detached `h3-comfyui` screen;
+- a detached `h3-memory-watch` screen when `MEMORY_WATCH_ENABLED=1`;
 - a successful `/system_stats` response;
 - an empty queue;
 - RTX 5090 and the pinned PyTorch/CUDA stack;
@@ -113,10 +123,28 @@ After launch, require:
 - the `comfy-kitchen` CUDA backend available and enabled;
 - model search paths pointing to the data disk.
 
+`start-h3-comfyui.sh` launches the idle-only `watch-h3-memory.sh` guard in the separate
+`h3-memory-watch` screen by default. The separate screen prevents the watcher from killing itself
+when it restarts `h3-comfyui`. With `RESTART_AFTER_EACH_TASK=1` (default), the guard observes a
+busy-to-empty queue transition and restarts once after every completed task. It also uses the lower
+of 85% of `memory.max` and 92% of `memory.high` as a fallback for pre-existing retained state; it
+checks that the queue is empty
+before invoking `restart-h3-comfyui.sh`, and passes `RESTART_VALIDATION_MODE=health` so a routine
+memory cleanup performs service/node/model-discovery checks without re-hashing 59 GiB of models or
+generating a validation MP4. Set `MEMORY_WATCH_ENABLED=0` only for a controlled diagnostic or
+when another task-aware supervisor owns restarts. A watcher restart is never a substitute for
+preserving task checkpoints or verifying outputs.
+
 `validate-h3-deployment.sh` enforces these preflight checks before it submits its default FL2VA smoke.
 Set `RUN_REF2VA_SMOKE=1` together with task-local prompt and reference JSON paths for representative
 Ref2VA acceptance. Use `restart-h3-comfyui.sh` only for a healthy, empty service; it verifies the old
 single-process/screen boundary, starts a new process, and runs validation after recovery.
+
+When adding the guard to an existing deployment, upload all changed scripts first, validate their
+syntax, and atomically replace them. If the queue is empty, perform one planned full restart; that
+first restart clears the retained state already present and starts the `h3-memory-watch` screen.
+Require the service, queue, unique process, and both screen sessions to be healthy before submitting
+the next long task.
 
 ## Recovery and backup boundary
 

@@ -95,6 +95,8 @@ scripts/remote/install-h3-comfyui.sh
 scripts/remote/extra_model_paths.yaml
 scripts/remote/start-h3-comfyui.sh
 scripts/remote/check-h3-service.py
+scripts/remote/check-h3-memory.sh
+scripts/remote/watch-h3-memory.sh
 scripts/remote/restart-h3-comfyui.sh
 ```
 
@@ -164,7 +166,7 @@ tail -100 /root/autodl-tmp/h3/logs/comfyui-restart.log
 
 健康状态应同时满足：
 
-- 恰好一个 ComfyUI 进程和一个 `h3-comfyui` screen；
+- 恰好一个 ComfyUI 进程、一个 `h3-comfyui` screen 和一个 `h3-memory-watch` screen；
 - `/system_stats` 返回成功，且 `/queue` 为空；
 - 精确识别 ComfyUI 0.30.0、PyTorch 2.13.0+cu130 和 RTX 5090；
 - `MiniMaxH3ImageToVideo`、`MiniMaxH3ReferenceToVideo`、`VAEDecodeAudio`、
@@ -265,8 +267,14 @@ pgrep -af 'ComfyUI/main.py|python main.py'
 ```
 
 该脚本会在停止前确认服务健康和队列为空，要求唯一进程及既定 screen，等待旧进程退出，
-在新的 `h3-comfyui` screen 中重新启动，并在新进程恢复后执行完整部署验收。它不会在队列
-繁忙、进程数异常或 screen 丢失时盲目重启。
+在新的 `h3-comfyui` screen 中重新启动，并在新进程恢复后执行完整部署验收。由内存 watcher
+触发的重启会设置 `RESTART_VALIDATION_MODE=health`，只做服务/节点/模型发现检查，不重新
+计算全部模型 SHA-256，也不生成验收 MP4。它不会在队列繁忙、进程数异常或 screen 丢失时
+盲目重启。
+
+`start-h3-comfyui.sh` 默认启用 watcher：每当它观察到队列从 busy 变为空，就在空队列状态
+下做一次计划重启，以释放 CPU offload 和 ComfyUI 进程缓存。若批处理 runner 同时使用，
+将 manifest 的 `restart_comfyui_every_tasks` 设为 `0`，避免双重重启。
 
 ## 11. 保存环境镜像和数据备份
 

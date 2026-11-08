@@ -14,6 +14,8 @@ EXPECTED_DEVICE="${EXPECTED_DEVICE:-NVIDIA GeForce RTX 5090}"
 STOP_TIMEOUT_SECONDS="${STOP_TIMEOUT_SECONDS:-60}"
 START_TIMEOUT_SECONDS="${START_TIMEOUT_SECONDS:-120}"
 RESTART_LOCK="${RESTART_LOCK:-${DATA_ROOT}/tmp/h3-restart.lock}"
+RESTART_RUN_VALIDATION_SMOKE="${RESTART_RUN_VALIDATION_SMOKE:-1}"
+RESTART_VALIDATION_MODE="${RESTART_VALIDATION_MODE:-full}"
 
 comfyui_pids() {
   pgrep -f 'python([0-9.]*)? .*main\.py .*--listen' 2>/dev/null || true
@@ -54,6 +56,10 @@ for command_name in flock pgrep screen; do
     exit 1
   fi
 done
+if [[ "${RESTART_VALIDATION_MODE}" != "full" && "${RESTART_VALIDATION_MODE}" != "health" ]]; then
+  printf 'RESTART_VALIDATION_MODE must be full or health\n' >&2
+  exit 1
+fi
 
 mkdir -p "${DATA_ROOT}/tmp"
 exec 9>"${RESTART_LOCK}"
@@ -96,7 +102,13 @@ while (( SECONDS < deadline )); do
     mapfile -t new_pids < <(comfyui_pids)
     if (( ${#new_pids[@]} == 1 )) && [[ "${new_pids[0]}" != "${old_pid}" ]] \
       && screen -list 2>/dev/null | grep -qE "[0-9]+\.${SERVICE_SCREEN}[[:space:]]"; then
-      exec "${VALIDATE_SCRIPT}"
+      if [[ "${RESTART_VALIDATION_MODE}" == "health" ]]; then
+        exit 0
+      fi
+      if [[ "${RESTART_RUN_VALIDATION_SMOKE}" == "1" ]]; then
+        exec "${VALIDATE_SCRIPT}"
+      fi
+      RUN_FL2VA_SMOKE=0 RUN_REF2VA_SMOKE=0 exec "${VALIDATE_SCRIPT}"
     fi
   fi
   sleep 2
