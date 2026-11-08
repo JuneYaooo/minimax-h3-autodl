@@ -45,6 +45,7 @@
 !/scripts/remote/restart-h3-comfyui.sh
 !/scripts/remote/run-h3-ref2va-smoke.py
 !/scripts/remote/run-h3-smoke.py
+!/scripts/remote/upscale-h3-video.py
 !/scripts/remote/start-h3-comfyui.sh
 !/scripts/remote/validate-h3-deployment.sh
 !/scripts/remote/verify-h3-models.sh

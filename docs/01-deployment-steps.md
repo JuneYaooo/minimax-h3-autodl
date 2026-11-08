@@ -16,7 +16,7 @@
 | CUDA runtime | 13.0 |
 | 模型路线 | Comfy-Org FL2VA + Ref2VA 消费卡量化组合 |
 | 本地能力 | T2VA、首帧/尾帧/首尾帧、图像/视频/音频多参考，原生立体声音频 |
-| 本地分辨率边界 | H3-Base 约 768p；官方完整 2K 仍需托管的 Regenerate-2K |
+| 本地分辨率边界 | H3-Base 约 768p；本地可用 Real-ESRGAN 后处理放大到 1K/2K（见第 9.1 节）；官方 Regenerate-2K 仍是托管模块 |
 
 ## 2. 磁盘布局
 
@@ -245,6 +245,33 @@ frames = 17 × n + 5
 ```
 
 冒烟请求也必须使用合法帧数，不能在推理请求中填写任意帧数。
+
+### 9.1 放大到 1K / 2K
+
+H3-Base 原生约 768p。本地 1K/2K 使用后处理超分，不是官方 Regenerate-2K：
+
+```text
+LoadVideo → Real-ESRGAN x2（逐帧）→ Lanczos 精确缩放 → 原音轨 + 原 fps → SaveVideo
+```
+
+| 目标 | 短边 | 16:9 示例 |
+| --- | ---: | --- |
+| `1k` | 1080 | 1920×1080 |
+| `2k` | 1440 | 2560×1440 |
+
+模型文件（约 64 MiB）放在 `comfyui-models/upscale_models/RealESRGAN_x2plus.pth`，
+来源 `https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth`，
+SHA-256 `49fafd45f8fd7aa8d31ab2a22d14d91b536c34494a5cfe31eb5d89c2fa266abb`。
+
+在队列为空时执行（路径可为绝对路径或相对 `outputs/`）：
+
+```bash
+/root/miniconda3/bin/python /root/autodl-tmp/h3/deploy/upscale-h3-video.py \
+  h3-smoke/minimax_h3_00001_.mp4 --target 2k
+```
+
+`--target` 也接受 `WxH`。输出写入 `outputs/h3-upscaled/`。超分只提升清晰度，不会增加
+原视频没有的细节结构；对比时以原生 768p 结果为基准。
 
 ## 10. 服务停止和重启
 

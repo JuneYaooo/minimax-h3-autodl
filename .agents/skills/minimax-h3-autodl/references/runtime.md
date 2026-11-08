@@ -59,6 +59,7 @@ scripts/remote/restart-h3-comfyui.sh
 scripts/remote/validate-h3-deployment.sh
 scripts/remote/run-h3-smoke.py
 scripts/remote/run-h3-ref2va-smoke.py
+scripts/remote/upscale-h3-video.py   (optional 1K/2K Real-ESRGAN post-process; needs upscale_models/RealESRGAN_x2plus.pth)
 scripts/remote/extra_model_paths.yaml
 scripts/capture-environment.sh
 ```
